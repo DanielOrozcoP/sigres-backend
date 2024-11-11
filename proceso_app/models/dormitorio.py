@@ -8,6 +8,7 @@ from proceso_app.models.edificio import Edificio
 
 class Dormitorio(models.Model):
     codigo = models.CharField(max_length=15,verbose_name="codigo", unique=True, primary_key=True)
+    descricpion = models.CharField(max_length=250)
     edificioID = models.ForeignKey(Edificio, on_delete=models.DO_NOTHING, verbose_name='edificio', related_name='dormitorios')
 
     def __str__(self):

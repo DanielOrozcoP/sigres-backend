@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'proceso_app',
+    'servicios_app',
+    'control_acceso_app',
     'corsheaders'
 ]
 
