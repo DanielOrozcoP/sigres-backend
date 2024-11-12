@@ -41,7 +41,6 @@ INSTALLED_APPS = [
     'proceso_app',
     'servicios_app',
     'control_acceso_app',
-    'corsheaders'
 ]
 
 MIDDLEWARE = [
