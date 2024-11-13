@@ -5,7 +5,10 @@ from proceso_app.models.edificio import Edificio
 
 
 class EdificioSerializer(serializers.ModelSerializer):
+    cant_dormitorios = serializers.SerializerMethodField(read_only=True)
     class Meta:
         model = Edificio
-        fields = "__all__"
+        fields = ['codigo','sexo','sedeID','cant_dormitorios','dormitorios']
 
+    def get_cant_dormitorios(self, obj):
+        return obj.dormitorios.count()

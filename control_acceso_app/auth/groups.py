@@ -36,14 +36,26 @@ def create_j_beca_group():
         j_beca_group.permissions.add(permiso)
 
 def create_especialista_groups():
-    # Crear el grupo especialista
-    especialista_group, created = Group.objects.get_or_create(name='especialista')
-    # Obtener ContentTypes para los modelos relevantes
-    content_types = ContentType.objects.get_for_models(sede.Sede, edificio.Edificio, dormitorio.Dormitorio, cuarto.Cuarto, estudiante.Estudiante)
-    permissions_codename = ['add', 'change', 'delete', 'view']
-    # Asignar permisos al grupo especialista para cada modelo
-    for model_name, ct in content_types.items():
-        for codename in permissions_codename:
-            permission_codename = f"{codename}_{str(model_name).split('.')[2]}"
-            permiso = Permission.objects.get(codename=permission_codename, content_type=ct)
-            especialista_group.permissions.add(permiso)
+    group, created = Group.objects.get_or_create(name='Especialista')
+    
+    # Lista de permisos que quieres asignar
+    permission_list = [
+        ('add_sede', 'proceso_app', 'sede'),
+        ('change_sede', 'proceso_app', 'sede'),
+        ('view_sede', 'proceso_app', 'sede'),
+        # Agrega aquí más permisos en el formato (codename, app_label, model)
+    ]
+
+    for codename, app_label, model in permission_list:
+        try:
+            content_type = ContentType.objects.get(app_label=app_label, model=model)
+            permission, created = Permission.objects.get_or_create(
+                codename=codename,
+                content_type=content_type
+            )
+            group.permissions.add(permission)
+        except ContentType.DoesNotExist:
+            print(f"ContentType for {app_label}.{model} does not exist yet.")
+        except Exception as e:
+            print(f"Error adding permission {codename}: {str(e)}")
+    return group

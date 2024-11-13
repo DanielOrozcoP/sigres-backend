@@ -4,7 +4,6 @@ from proceso_app.models.sede import Sede
 
 
 class SedeSerializer(serializers.ModelSerializer):
-    edificios = EdificioSerializer(many=True, read_only=True)
     class Meta:
         model = Sede
         fields = '__all__'
