@@ -44,3 +44,8 @@ class Rep_Total_Serializer(serializers.Serializer):
     total_dormitorios = serializers.IntegerField()
     total_cuartos = serializers.IntegerField()
     total_estudiantes = serializers.IntegerField()
+
+class Rep_Ocupacion_Total_Serializer(serializers.Serializer):
+    total_capacidad = serializers.IntegerField()
+    total_disponible = serializers.IntegerField()
+    total_ocupacion = serializers.IntegerField()

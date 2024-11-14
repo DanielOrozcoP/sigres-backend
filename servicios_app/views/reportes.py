@@ -1,6 +1,6 @@
-from servicios_app.serializers.reportes import Rep_Total_by_Sede_Serializer, Rep_Total_Serializer
+from servicios_app.serializers.reportes import Rep_Total_by_Sede_Serializer, Rep_Total_Serializer,Rep_Ocupacion_Total_Serializer
 from rest_framework import generics
-from django.db.models import Count
+from django.db.models import Count, F, Sum
 from control_acceso_app.auth.permissions import IsEspecialista
 from proceso_app.models import sede, edificio, dormitorio,cuarto,estudiante
 from rest_framework.response import Response
@@ -44,7 +44,19 @@ class Rep_Total(generics.ListAPIView):
     
     
 class Rep_Ocupacion_Total(generics.ListAPIView):
-    pass
+    serializer_class = Rep_Ocupacion_Total_Serializer
+    def get(self,request,*args,**kwargs):
+        total_capacidad = cuarto.Cuarto.objects.aggregate(total_capacidad=Sum('capacidad'))['total_capacidad'] or 0
+        total_disponible = cuarto.Cuarto.objects.aggregate(total_disponible=Sum(F('capacidad') - F('ocupacion')))['total_disponible'] or 0
+        total_ocupacion = cuarto.Cuarto.objects.aggregate(total_ocupacion=Sum('ocupacion'))['total_ocupacion'] or 0
+        data = {
+            'total_capacidad': total_capacidad,
+            'total_disponible': total_disponible,
+            'total_ocupacion': total_ocupacion,
+        }
+        serializer = self.get_serializer(data)
+        return Response(serializer.data)
+
 
 class Rep_Ocupacion_By_Sede(generics.ListAPIView):
     pass
