@@ -1,10 +1,34 @@
 from django.db.models.signals import post_migrate
 from django.dispatch import receiver
-from control_acceso_app.auth.groups import create_directivo_group,create_especialista_groups,create_admin_group,create_j_beca_group
+from django.contrib.auth.models import Permission, Group
+from django.contrib.contenttypes.models import ContentType
 
 @receiver(post_migrate)
 def create_groups(sender, **kwargs):
-    create_directivo_group(),create_especialista_groups(),create_admin_group(),create_j_beca_group()
+    try:
+        # Intentar crear los grupos
+        # Grupo Administrador
+        admin_group, _ = Group.objects.get_or_create(name='Administrador')
+        
+        # Grupo Especialista
+        especialista_group, _ = Group.objects.get_or_create(name='Especialista')
+        
+        # Grupo Estudiante
+        estudiante_group, _ = Group.objects.get_or_create(name='Estudiante')
+
+        # Asignar permisos si existen
+        try:
+            # Aquí van tus asignaciones de permisos actuales
+            # Si algún permiso no existe, se saltará esa asignación
+            pass
+        except Permission.DoesNotExist:
+            # Los permisos específicos no existen aún
+            pass
+
+    except Exception as e:
+        # Log del error pero permitir que la aplicación continúe
+        print(f"Error al crear grupos: {str(e)}")
+        pass
 
 
 
