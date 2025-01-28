@@ -1,9 +1,10 @@
-from proceso_app.models import Cuarto, Estudiante, Sede
+from proceso_app.models.cuarto import Cuarto 
+from proceso_app.models.estudiante import Estudiante
+from proceso_app.models.sede import Sede
 from proceso_app.serializers.cuarto import CuartoSerializer
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
-from django.db.models import ExpressionWrapper, F, Q, Count
-from servicios_app import utils
+from django.db.models import F, Q, Count
 from django.core.exceptions import ValidationError
 
 # Create your views here.
@@ -36,10 +37,10 @@ def get_cuarto_free(request):
 
         # Aplicar filtros según parámetros
         if sede_id:
-            query &= Q(dormitorio__edificio__sede_id=sede_id)
+            query &= Q(dormitorioID__edificioID__sedeID__codigo=sede_id)
         
         if edificio_id:
-            query &= Q(dormitorio__edificio_id=edificio_id)
+            query &= Q(dormitorioID__edificioID__codigo=edificio_id)
         
         if capacidad_min:
             query &= Q(capacidad__gte=int(capacidad_min))
@@ -62,40 +63,30 @@ def get_cuarto_free(request):
         # Obtener cuartos
         cuartos_disponibles = (
             Cuarto.objects.filter(query)
-            .select_related('dormitorio__edificio__sede')  # Optimización de consultas
+            .select_related('dormitorioID__edificioID__sedeID')
             .order_by(order_by)
         )
 
         # Serializar resultados
         serializer = CuartoSerializer(cuartos_disponibles, many=True)
 
-        # Preparar metadata
-        metadata = {
-            'total_cuartos': cuartos_disponibles.count(),
-            'filtros_aplicados': {
-                'sede_id': sede_id,
-                'edificio_id': edificio_id,
-                'capacidad_min': capacidad_min,
-                'capacidad_max': capacidad_max,
-                'ordenar_por': ordenar_por
-            }
-        }
-
         return JsonResponse({
-            'metadata': metadata,
+            'metadata': {
+                'total_cuartos': cuartos_disponibles.count(),
+                'filtros_aplicados': {
+                    'sede_id': sede_id,
+                    'edificio_id': edificio_id,
+                    'capacidad_min': capacidad_min,
+                    'capacidad_max': capacidad_max,
+                    'ordenar_por': ordenar_por
+                }
+            },
             'cuartos_disponibles': serializer.data
         })
 
-    except ValidationError as e:
-        return JsonResponse({
-            'error': 'Error de validación',
-            'detalles': str(e)
-        }, status=400)
-    
     except Exception as e:
         return JsonResponse({
-            'error': 'Error al obtener cuartos disponibles',
-            'detalles': str(e)
+            'error': str(e)
         }, status=500)
 
 @api_view(['GET'])
@@ -110,7 +101,7 @@ def asignar_cuarto(request):
     Returns:
         JsonResponse con el cuarto sugerido para asignación
     """
-    if request.method == 'GET':
+    try:
         estudiante_id = request.GET.get('estudiante_id')
         sede_id = request.GET.get('sede_id')
 
@@ -118,53 +109,54 @@ def asignar_cuarto(request):
             return JsonResponse({
                 'error': 'Se requiere el ID del estudiante'
             }, status=400)
+
         try:
-            # Obtener estudiante y sus datos
-            estudiante = Estudiante.objects.get(id=estudiante_id)
-            facultad = estudiante.facultad
-            carrera = estudiante.carrera
-            # Construir query base
-            query = Q(ocupacion__lt=F('capacidad'))  # Cuartos con espacio disponible
-            # Si se especifica sede, filtrar por ella
-            if sede_id:
-                query &= Q(dormitorio__edificio__sede_id=sede_id)
-            # Priorizar cuartos:
-            # 1. Mismo edificio que otros estudiantes de la misma carrera
-            # 2. Mismo edificio que estudiantes de la misma facultad
-            # 3. Cualquier cuarto disponible en la sede especificada
-            cuarto_sugerido = (
-                Cuarto.objects.filter(query)
-                .annotate(
-                    estudiantes_misma_carrera=Count(
-                        'estudiantes',
-                        filter=Q(estudiantes__carrera=carrera)
-                    ),
-                    estudiantes_misma_facultad=Count(
-                        'estudiantes',
-                        filter=Q(estudiantes__facultad=facultad)
-                    )
-                )
-                .order_by(
-                    '-estudiantes_misma_carrera',
-                    '-estudiantes_misma_facultad',
-                    'ocupacion'
-                )
-                .first()
-            )
-            if not cuarto_sugerido:
-                return JsonResponse({
-                    'message': 'No hay cuartos disponibles con los criterios especificados'
-                }, status=404)
-            serializer = CuartoSerializer(cuarto_sugerido)
-            return JsonResponse({
-                'cuarto_sugerido': serializer.data,
-                'mensaje': 'Cuarto disponible para asignación'
-            })
+            estudiante = Estudiante.objects.get(carnet_identidad=estudiante_id)
         except Estudiante.DoesNotExist:
             return JsonResponse({
                 'error': 'Estudiante no encontrado'
             }, status=404)
-        except Exception as e:
+
+        # Construir query base
+        query = Q(ocupacion__lt=F('capacidad'))  # Cuartos con espacio disponible
+
+        # Si se especifica sede, filtrar por ella
+        if sede_id:
+            query &= Q(dormitorioID__edificioID__sedeID__codigo=sede_id)
+
+        # Priorizar cuartos
+        cuarto_sugerido = (
+            Cuarto.objects.filter(query)
+            .annotate(
+                estudiantes_misma_carrera=Count(
+                    'estudiantes',
+                    filter=Q(estudiantes__carrera=estudiante.carrera)
+                ),
+                estudiantes_misma_facultad=Count(
+                    'estudiantes',
+                    filter=Q(estudiantes__facultad=estudiante.facultad)
+                )
+            )
+            .order_by(
+                '-estudiantes_misma_carrera',
+                '-estudiantes_misma_facultad',
+                'ocupacion'
+            )
+            .first()
+        )
+
+        if not cuarto_sugerido:
             return JsonResponse({
-                'error': str(e)
-            }, status=500)
+                'message': 'No hay cuartos disponibles con los criterios especificados'
+            }, status=404)
+
+        serializer = CuartoSerializer(cuarto_sugerido)
+        return JsonResponse({
+            'cuarto_sugerido': serializer.data,
+            'mensaje': 'Cuarto disponible para asignación'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'error': str(e)
+        }, status=500)
