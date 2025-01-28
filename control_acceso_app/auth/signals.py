@@ -8,13 +8,13 @@ def create_groups(sender, **kwargs):
     try:
         # Intentar crear los grupos
         # Grupo Administrador
-        admin_group, _ = Group.objects.get_or_create(name='Administrador')
+        admin_group, _ = Group.objects.get_or_create(name='administrador')
         
         # Grupo Especialista
-        especialista_group, _ = Group.objects.get_or_create(name='Especialista')
+        especialista_group, _ = Group.objects.get_or_create(name='especialista')
         
         # Grupo Estudiante
-        estudiante_group, _ = Group.objects.get_or_create(name='Estudiante')
+        estudiante_group, _ = Group.objects.get_or_create(name='estudiante')
 
         # Asignar permisos si existen
         try:
